@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 
 # Título de la aplicación
-st.title("Procesador de Archivos CSV")
+st.title("Procesador Automático de CSV - Filtro por 'Valor Neto'")
 
 # Subida del archivo CSV
 uploaded_file = st.file_uploader("Sube un archivo CSV", type="csv")
@@ -15,42 +15,28 @@ if uploaded_file is not None:
     st.subheader("Vista previa del archivo CSV:")
     st.dataframe(df)
 
-    # Extracción de información específica
-    st.subheader("Extracción de datos específicos")
+    # Verificar si la columna 'valor neto' existe
+    if 'valor neto' in df.columns:
+        # Convertir 'valor neto' a un tipo numérico (si no lo está)
+        df['valor neto'] = pd.to_numeric(df['valor neto'], errors='coerce')
 
-    # Mostrar columnas disponibles
-    st.write("Columnas disponibles:", list(df.columns))
+        # Filtrar automáticamente los datos por un rango predeterminado
+        st.subheader("Filtro Automático en 'Valor Neto'")
+        min_value = st.number_input("Valor mínimo:", value=float(df['valor neto'].min()))
+        max_value = st.number_input("Valor máximo:", value=float(df['valor neto'].max()))
+        filtered_data = df[(df['valor neto'] >= min_value) & (df['valor neto'] <= max_value)]
 
-    # Selección de columna para analizar
-    column_to_analyze = st.selectbox("Selecciona una columna para analizar:", df.columns)
-
-    # Mostrar estadísticas básicas de la columna seleccionada
-    if column_to_analyze:
-        st.write(f"Estadísticas de la columna '{column_to_analyze}':")
-        st.write(df[column_to_analyze].describe())
-
-    # Filtro personalizado
-    st.subheader("Filtrar datos")
-    if st.checkbox("¿Deseas aplicar un filtro a los datos?"):
-        filter_column = st.selectbox("Selecciona la columna para filtrar:", df.columns)
-        if df[filter_column].dtype == 'object':
-            unique_values = df[filter_column].unique()
-            selected_value = st.selectbox(f"Selecciona un valor en '{filter_column}':", unique_values)
-            filtered_data = df[df[filter_column] == selected_value]
-        else:
-            min_value = st.number_input(f"Valor mínimo para '{filter_column}':", value=float(df[filter_column].min()))
-            max_value = st.number_input(f"Valor máximo para '{filter_column}':", value=float(df[filter_column].max()))
-            filtered_data = df[(df[filter_column] >= min_value) & (df[filter_column] <= max_value)]
-
+        # Mostrar datos filtrados
         st.write("Datos filtrados:")
         st.dataframe(filtered_data)
 
-    # Descargar datos filtrados
-    if st.checkbox("¿Deseas descargar los datos filtrados?"):
+        # Descargar datos filtrados
         csv = filtered_data.to_csv(index=False).encode('utf-8')
         st.download_button(
-            label="Descargar CSV",
+            label="Descargar CSV Filtrado",
             data=csv,
             file_name='datos_filtrados.csv',
             mime='text/csv'
         )
+    else:
+        st.error("La columna 'valor neto' no se encontró en el archivo CSV. Por favor, sube un archivo válido.")
