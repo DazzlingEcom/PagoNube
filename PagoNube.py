@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 
 # Título de la aplicación
-st.title("Procesador Automático de CSV - Valor Neto")
+st.title("Procesador Automático de CSV - Filtrar y Ordenar por Valor Neto")
 
 # Subida del archivo CSV
 uploaded_file = st.file_uploader("Sube un archivo CSV", type="csv")
@@ -14,29 +14,37 @@ if uploaded_file is not None:
     # Agregar un encabezado provisional para identificar columnas
     df.columns = [f"col_{i}" for i in range(df.shape[1])]
 
+    # Excluir filas cuya columna 0 esté vacía
+    df = df[df['col_0'].notna() & df['col_0'].str.strip().astype(bool)]
+
     # Extraer el último número (valor neto) de cada fila
     df["valor_neto"] = pd.to_numeric(df.iloc[:, -1], errors="coerce")
 
-    # Mostrar vista previa del archivo
-    st.subheader("Vista previa del archivo original:")
+    # Convertir la columna de fecha a formato datetime (col_5 en este caso)
+    if 'col_5' in df.columns:
+        df["fecha"] = pd.to_datetime(df["col_5"], errors="coerce", format='%d-%m-%Y %H:%M:%S')
+
+    # Mostrar vista previa del archivo original
+    st.subheader("Vista previa del archivo procesado:")
     st.dataframe(df)
 
-    # Filtrar datos automáticamente por un rango en "valor_neto"
-    st.subheader("Filtro Automático en 'Valor Neto'")
-    min_value = st.number_input("Valor mínimo:", value=float(df["valor_neto"].min()))
-    max_value = st.number_input("Valor máximo:", value=float(df["valor_neto"].max()))
-    filtered_data = df[(df["valor_neto"] >= min_value) & (df["valor_neto"] <= max_value)]
+    # Agrupar por fecha y sumar los valores de "valor_neto"
+    grouped_df = df.groupby(df["fecha"].dt.date)["valor_neto"].sum().reset_index()
+    grouped_df.columns = ["fecha", "suma_valor_neto"]
 
-    # Mostrar datos filtrados
-    st.write("Datos filtrados:")
-    st.dataframe(filtered_data)
+    # Ordenar por la suma de valores netos
+    sorted_grouped_df = grouped_df.sort_values(by="suma_valor_neto", ascending=False)
 
-    # Descargar datos filtrados
-    csv = filtered_data.to_csv(index=False).encode('utf-8')
+    # Mostrar datos ordenados
+    st.subheader("Datos agrupados por fecha y ordenados por suma de 'valor_neto':")
+    st.dataframe(sorted_grouped_df)
+
+    # Descargar datos ordenados
+    csv = sorted_grouped_df.to_csv(index=False).encode('utf-8')
     st.download_button(
-        label="Descargar CSV Filtrado",
+        label="Descargar CSV Ordenado",
         data=csv,
-        file_name='datos_filtrados.csv',
+        file_name='datos_ordenados.csv',
         mime='text/csv'
     )
 else:
