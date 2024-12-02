@@ -9,7 +9,7 @@ uploaded_file = st.file_uploader("Sube un archivo CSV", type="csv")
 
 if uploaded_file is not None:
     # Leer el archivo CSV sin encabezados
-    df = pd.read_csv(uploaded_file, header=None)
+    df = pd.read_csv(uploaded_file, header=None, sep=';')
 
     # Agregar un encabezado provisional para identificar columnas
     df.columns = [f"col_{i}" for i in range(df.shape[1])]
