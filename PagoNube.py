@@ -16,8 +16,8 @@ if uploaded_file is not None:
         encoding = detected_encoding['encoding']
         uploaded_file.seek(0)  # Resetear el puntero del archivo
 
-        # Leer archivo CSV
-        df = pd.read_csv(uploaded_file, sep='\t', encoding=encoding)
+        # Leer archivo CSV con separador punto y coma
+        df = pd.read_csv(uploaded_file, sep=';', encoding=encoding)
         st.write("Archivo leído correctamente.")
         st.write(f"Encoding detectado: {encoding}")
 
@@ -25,7 +25,7 @@ if uploaded_file is not None:
         st.write("Vista previa del archivo original:")
         st.dataframe(df.head())
 
-        # Verificar columnas
+        # Verificar columnas necesarias
         required_columns = ["Cliente", "Número de venta", "Valor neto"]
         st.write("Columnas detectadas:", list(df.columns))
         if not all(col in df.columns for col in required_columns):
