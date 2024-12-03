@@ -21,7 +21,7 @@ if uploaded_file is not None:
         st.write("Archivo leído correctamente.")
         st.write(f"Encoding detectado: {encoding}")
 
-        # Mostrar vista previa del archivo
+        # Mostrar vista previa del archivo original
         st.write("Vista previa del archivo original:")
         st.dataframe(df.head())
 
@@ -34,13 +34,17 @@ if uploaded_file is not None:
 
         # Limpieza de la columna "Número de venta"
         st.write("Procesando columna 'Número de venta'...")
+        st.write("Valores únicos en la columna 'Número de venta':")
+        st.write(df["Número de venta"].unique())
+
+        # Convertir "Número de venta" a string, eliminar espacios
         df["Número de venta"] = df["Número de venta"].astype(str).str.strip()
 
         # Filtrar filas con valores no válidos o nulos en "Número de venta"
         df = df[df["Número de venta"].notna()]
         df = df[df["Número de venta"].str.isnumeric()]
 
-        # Mostrar vista previa después del filtrado
+        # Mostrar vista previa después del filtrado por "Número de venta"
         st.write("Vista previa después de filtrar números de venta válidos:")
         st.dataframe(df.head())
 
@@ -48,8 +52,16 @@ if uploaded_file is not None:
         st.write("Convirtiendo 'Valor neto' a valores numéricos...")
         df["Valor neto"] = pd.to_numeric(df["Valor neto"], errors="coerce")
 
-        # Filtrar filas válidas
+        # Filtrar filas válidas en "Valor neto"
+        st.write("Filas con valores no válidos en 'Valor neto':")
+        invalid_rows = df[df["Valor neto"].isna()]
+        st.dataframe(invalid_rows)
+
         valid_df = df.dropna(subset=["Valor neto"])
+
+        # Mostrar datos válidos después del filtrado
+        st.write("Vista previa de datos válidos para agrupar:")
+        st.dataframe(valid_df)
 
         # Agrupar por "Número de venta" y sumar los valores netos
         grouped_data = valid_df.groupby("Número de venta")["Valor neto"].sum().reset_index()
