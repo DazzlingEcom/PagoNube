@@ -3,64 +3,56 @@ import pandas as pd
 import chardet
 
 # Título de la aplicación
-st.title("Procesador Automático de CSV - Filtrar y Ordenar por Valor Neto")
+st.title("Procesador Automático de CSV - Filtrar y Exportar por Valor Neto y Número de Venta")
 
 # Subida del archivo CSV
 uploaded_file = st.file_uploader("Sube un archivo CSV", type="csv")
 
 if uploaded_file is not None:
     try:
-        # Detectar el encoding del archivo
+        # Detectar encoding
         raw_data = uploaded_file.read()
-        result = chardet.detect(raw_data)
-        encoding = result['encoding']
+        detected_encoding = chardet.detect(raw_data)
+        encoding = detected_encoding['encoding']
+        uploaded_file.seek(0)  # Resetear el puntero del archivo
+
+        # Leer archivo CSV
+        df = pd.read_csv(uploaded_file, sep=';', encoding=encoding)
+        st.write("Archivo leído correctamente.")
         st.write(f"Encoding detectado: {encoding}")
 
-        # Volver a cargar el archivo con el encoding detectado
-        uploaded_file.seek(0)  # Restablecer el puntero del archivo después de leer
-        df = pd.read_csv(uploaded_file, encoding=encoding, sep=';')
+        # Vista previa de las columnas detectadas
+        st.write("Columnas detectadas:", list(df.columns))
 
-        # Mostrar columnas detectadas
-        st.write("Columnas detectadas antes de renombrar:", list(df.columns))
+        # Validar columnas necesarias
+        required_columns = ["Número de venta", "Valor neto"]
+        if not all(col in df.columns for col in required_columns):
+            st.error(f"Faltan las siguientes columnas requeridas: {required_columns}")
+            st.stop()
 
-        # Establecer encabezados correctos manualmente
-        df.columns = [
-            "cliente", "medio_pago", "descripcion", "numero_venta",
-            "fecha_creacion", "disponible_transferir", "monto_venta",
-            "tasa_pago_nube", "cantidad_cuotas", "costo_cuota_simple",
-            "costo_cuotas_pago_nube", "impuestos_iva", "impuestos_ganancias",
-            "valor_neto"
-        ]
+        # Asegurar que las columnas relevantes son de tipo string o numérico
+        df["Número de venta"] = df["Número de venta"].astype(str).fillna("")
+        df["Valor neto"] = pd.to_numeric(df["Valor neto"], errors="coerce")
 
-        # Mostrar vista previa del archivo con encabezados correctos
-        st.write("Vista previa del archivo después de renombrar:")
-        st.dataframe(df.head())
+        # Eliminar filas con valores no válidos en "Valor neto"
+        df = df.dropna(subset=["Valor neto"])
 
-        # Filtrar filas donde "numero_venta" no sea nulo ni vacío
-        df = df[df["numero_venta"].notna() & df["numero_venta"].str.strip().astype(bool)]
-
-        # Convertir "valor_neto" a numérico
-        df["valor_neto"] = pd.to_numeric(df["valor_neto"], errors="coerce")
-
-        # Convertir "fecha_creacion" a datetime
-        df["fecha"] = pd.to_datetime(df["fecha_creacion"], errors="coerce", format='%d-%m-%Y %H:%M:%S')
-
-        # Agrupar por "fecha" y "numero_venta", y sumar "valor_neto"
-        grouped_df = df.groupby(["fecha", "numero_venta"])["valor_neto"].sum().reset_index()
-        grouped_df.columns = ["fecha", "numero_venta", "suma_valor_neto"]
+        # Agrupar por "Número de venta" y sumar los valores netos
+        grouped_data = df.groupby("Número de venta")["Valor neto"].sum().reset_index()
 
         # Mostrar los datos agrupados
-        st.subheader("Datos agrupados por fecha y número de venta:")
-        st.dataframe(grouped_df)
+        st.subheader("Datos agrupados por Número de venta:")
+        st.dataframe(grouped_data)
 
-        # Exportar el CSV con la información agrupada
-        csv = grouped_df.to_csv(index=False).encode('utf-8')
+        # Exportar los datos agrupados a CSV
+        csv = grouped_data.to_csv(index=False).encode('utf-8')
         st.download_button(
             label="Descargar CSV Agrupado",
             data=csv,
-            file_name='datos_agrupados.csv',
+            file_name='ventas_agrupadas.csv',
             mime='text/csv'
         )
+
     except Exception as e:
         st.error(f"Error procesando el archivo: {e}")
 else:
