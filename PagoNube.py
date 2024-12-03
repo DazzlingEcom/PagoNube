@@ -3,7 +3,7 @@ import pandas as pd
 import chardet
 
 # Título de la aplicación
-st.title("Procesador de CSV - Suma y Exportación")
+st.title("Procesador de CSV - Agrupación y Filtrado")
 
 # Subida del archivo CSV
 uploaded_file = st.file_uploader("Sube un archivo CSV", type="csv")
@@ -18,39 +18,36 @@ if uploaded_file is not None:
 
         # Leer el archivo CSV con encoding detectado
         st.write(f"Encoding detectado: {encoding}")
-        df = pd.read_csv(uploaded_file, sep=';', encoding=encoding, on_bad_lines='skip')
+        df = pd.read_csv(uploaded_file, sep=';', encoding=encoding, skip_blank_lines=True, error_bad_lines=False)
         st.write("Archivo leído correctamente.")
         st.write(f"Total de filas originales: {df.shape[0]}")
 
-        # Mostrar vista previa
-        st.write("Vista previa del archivo original:")
-        st.dataframe(df.head(10))
-
-        # Intentar dividir las columnas si parecen comprimidas
+        # Intentar dividir columnas si parece comprimido
         if len(df.columns) == 1:
             st.warning("Las columnas parecen comprimidas. Intentando dividirlas...")
-            df = pd.read_csv(uploaded_file, sep=';', encoding=encoding, header=None)
+            df = pd.read_csv(uploaded_file, sep=';', encoding=encoding, header=0)
             st.write("Nuevas columnas detectadas después de dividir:")
-            st.write(list(df.columns))
+            st.write(df.columns.tolist())
 
-        # Comprobar encabezados esperados y asignar si es necesario
+        # Validar y asignar encabezados si están presentes
         expected_columns = [
-            "Cliente", "Medio de pago", "Descripción", "Número de venta", 
-            "Fecha de creación", "Disponible para transferir", "Monto de la venta", 
-            "Tasa Pago Nube", "Cantidad de cuotas", "Costo de Cuota Simple", 
+            "Cliente", "Medio de pago", "Descripción", "Número de venta",
+            "Fecha de creación", "Disponible para transferir", "Monto de la venta",
+            "Tasa Pago Nube", "Cantidad de cuotas", "Costo de Cuota Simple",
             "Costo de cuotas Pago Nube", "Impuestos - IVA", "Impuestos - Ganancias", "Valor neto"
         ]
+
         if len(df.columns) == len(expected_columns):
             df.columns = expected_columns
         else:
-            st.error("El archivo no tiene el formato esperado o las columnas no coinciden.")
+            st.error("El archivo no tiene el formato esperado. Por favor, verifica las columnas.")
             st.stop()
 
         # Validar columnas necesarias
         required_columns = ["Número de venta", "Valor neto", "Fecha de creación"]
         missing_columns = [col for col in required_columns if col not in df.columns]
         if missing_columns:
-            st.error(f"Faltan las columnas requeridas: {', '.join(missing_columns)}")
+            st.error(f"Faltan las siguientes columnas requeridas: {', '.join(missing_columns)}")
             st.stop()
 
         # Convertir columnas clave a los formatos adecuados
