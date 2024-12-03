@@ -40,11 +40,28 @@ if uploaded_file is not None:
     st.dataframe(sorted_grouped_df)
 
     # Descargar datos ordenados
-    csv = sorted_grouped_df.to_csv(index=False).encode('utf-8')
+    csv_sorted = sorted_grouped_df.to_csv(index=False).encode('utf-8')
     st.download_button(
         label="Descargar CSV Ordenado",
-        data=csv,
+        data=csv_sorted,
         file_name='datos_ordenados.csv',
+        mime='text/csv'
+    )
+
+    # Crear un DataFrame filtrado con "Número de venta" y "valor_neto"
+    filtered_df = df[["col_0", "valor_neto"]].rename(columns={"col_0": "numero_venta", "valor_neto": "valor_neto"})
+    filtered_df = filtered_df.dropna(subset=["valor_neto"])
+
+    # Mostrar los datos filtrados
+    st.subheader("Valores Netos con sus respectivos Números de Ventas:")
+    st.dataframe(filtered_df)
+
+    # Descargar datos filtrados
+    csv_filtered = filtered_df.to_csv(index=False).encode('utf-8')
+    st.download_button(
+        label="Descargar CSV Filtrado",
+        data=csv_filtered,
+        file_name='datos_filtrados.csv',
         mime='text/csv'
     )
 else:
