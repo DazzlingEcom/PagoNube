@@ -16,35 +16,46 @@ if uploaded_file is not None:
         encoding = detected_encoding['encoding']
         uploaded_file.seek(0)  # Resetear puntero del archivo
 
-        # Leer archivo con separador ";"
+        # Leer archivo con separador ";" y encoding detectado
         df = pd.read_csv(uploaded_file, sep=';', encoding=encoding)
         st.write("Archivo leído correctamente.")
         st.write(f"Encoding detectado: {encoding}")
 
-        # Mostrar columnas detectadas y vista previa del archivo
+        # Mostrar las primeras filas para diagnóstico
+        st.write("Vista previa del archivo original:")
+        st.dataframe(df.head(10))
+
+        # Diagnóstico de columnas
         st.write("Columnas detectadas:")
-        st.dataframe(df.head(10))  # Verifica visualmente los encabezados y valores iniciales
+        st.write(list(df.columns))
 
-        # Renombrar columnas manualmente si no coinciden con las esperadas
-        if "Número de venta" not in df.columns and df.shape[1] > 3:
-            st.warning("Renombrando columnas automáticamente.")
-            df.columns = ["Cliente", "Medio de pago", "Descripción", "Número de venta",
-                          "Fecha de creación", "Disponible para transferir", "Monto de la venta",
-                          "Tasa Pago Nube", "Cantidad de cuotas", "Costo de Cuota Simple",
-                          "Costo de cuotas Pago Nube", "Impuestos - IVA", "Impuestos - Ganancias", "Valor neto"]
+        # Si el archivo no tiene las columnas esperadas
+        expected_columns = ["Cliente", "Medio de pago", "Descripción", "Número de venta",
+                            "Fecha de creación", "Disponible para transferir", "Monto de la venta",
+                            "Tasa Pago Nube", "Cantidad de cuotas", "Costo de Cuota Simple",
+                            "Costo de cuotas Pago Nube", "Impuestos - IVA", "Impuestos - Ganancias", "Valor neto"]
 
-        # Validar si las columnas clave están presentes
+        if len(df.columns) == 1:  # El archivo puede tener encabezados en una única celda
+            df = pd.read_csv(uploaded_file, sep=';', encoding=encoding, header=None)
+            df.columns = expected_columns
+
+        elif set(expected_columns).issubset(df.columns):
+            df = df[expected_columns]  # Reordenar columnas si hay desalineación
+        else:
+            st.warning("Intentando renombrar columnas.")
+            df.columns = expected_columns
+
+        # Confirmar las columnas clave
         required_columns = ["Número de venta", "Valor neto"]
-        st.write("Columnas después del renombramiento:", list(df.columns))
         if not all(col in df.columns for col in required_columns):
-            st.error(f"Faltan las siguientes columnas requeridas: {', '.join(required_columns)}")
+            st.error(f"Faltan columnas requeridas: {', '.join(required_columns)}")
             st.stop()
 
-        # Convertir "Número de venta" y "Valor neto" a numérico
+        # Convertir columnas a formato numérico
         df["Número de venta"] = pd.to_numeric(df["Número de venta"], errors="coerce")
         df["Valor neto"] = pd.to_numeric(df["Valor neto"], errors="coerce")
 
-        # Eliminar filas sin datos válidos en las columnas clave
+        # Eliminar filas con datos no válidos en las columnas clave
         valid_sales = df.dropna(subset=["Número de venta", "Valor neto"])
 
         # Agrupar por "Número de venta" y sumar "Valor neto"
@@ -66,6 +77,7 @@ if uploaded_file is not None:
                 file_name='ventas_agrupadas.csv',
                 mime='text/csv'
             )
+
     except Exception as e:
         st.error(f"Error procesando el archivo: {e}")
 else:
