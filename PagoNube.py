@@ -3,7 +3,7 @@ import pandas as pd
 import chardet
 
 # Título de la aplicación
-st.title("Procesador Automático de CSV - Filtrar y Exportar por Valor Neto y Número de Venta")
+st.title("Procesador Automático de CSV - Agrupar por Número de Venta y Valor Neto")
 
 # Subida del archivo CSV
 uploaded_file = st.file_uploader("Sube un archivo CSV", type="csv")
@@ -17,7 +17,7 @@ if uploaded_file is not None:
         uploaded_file.seek(0)  # Resetear el puntero del archivo
 
         # Leer archivo CSV
-        df = pd.read_csv(uploaded_file, sep=';', encoding=encoding, header=None)
+        df = pd.read_csv(uploaded_file, sep=';', encoding=encoding)
         st.write("Archivo leído correctamente.")
         st.write(f"Encoding detectado: {encoding}")
 
@@ -25,30 +25,24 @@ if uploaded_file is not None:
         st.write("Vista previa del archivo:")
         st.dataframe(df.head())
 
-        # Asignar nombres provisionales a las columnas
-        df.columns = [f"col_{i}" for i in range(df.shape[1])]
-
-        # Validar que al menos haya suficientes columnas para identificar la cuarta columna (Número de venta)
-        if df.shape[1] < 4:
-            st.error("El archivo no contiene suficientes columnas para procesar.")
+        # Verificar nombres de columnas y mapearlos correctamente
+        required_columns = ["Número de venta", "Valor neto"]
+        missing_columns = [col for col in required_columns if col not in df.columns]
+        if missing_columns:
+            st.error(f"Faltan las siguientes columnas requeridas: {missing_columns}")
             st.stop()
 
-        # Seleccionar la cuarta columna como "Número de venta"
-        df["Número de venta"] = df["col_3"].astype(str).fillna("")
-        if df["Número de venta"].str.isnumeric().all():
-            df["Número de venta"] = df["Número de venta"].astype(int).astype(str)
+        # Asegurarse de que "Número de venta" sea tratada como texto para evitar problemas con ceros iniciales
+        df["Número de venta"] = df["Número de venta"].astype(str)
 
-        # Validar que al menos haya suficientes columnas para identificar "Valor neto"
-        if df.shape[1] < 13:  # Por ejemplo, si "Valor neto" está en la última columna
-            st.error("El archivo no contiene suficientes columnas para identificar 'Valor neto'.")
-            st.stop()
+        # Convertir "Valor neto" a numérico
+        df["Valor neto"] = pd.to_numeric(df["Valor neto"], errors="coerce")
 
-        # Seleccionar la columna "Valor neto" (última columna)
-        df["Valor neto"] = pd.to_numeric(df.iloc[:, -1], errors="coerce")
-        df = df.dropna(subset=["Valor neto"])
+        # Filtrar filas válidas
+        valid_df = df.dropna(subset=["Número de venta", "Valor neto"])
 
         # Agrupar por "Número de venta" y sumar los valores netos
-        grouped_data = df.groupby("Número de venta")["Valor neto"].sum().reset_index()
+        grouped_data = valid_df.groupby("Número de venta")["Valor neto"].sum().reset_index()
 
         # Mostrar los datos agrupados
         st.subheader("Datos agrupados por Número de venta:")
