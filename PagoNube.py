@@ -17,26 +17,34 @@ if uploaded_file is not None:
         uploaded_file.seek(0)  # Resetear el puntero del archivo
 
         # Leer archivo CSV
-        df = pd.read_csv(uploaded_file, sep=';', encoding=encoding)
+        df = pd.read_csv(uploaded_file, sep=';', encoding=encoding, header=None)
         st.write("Archivo leído correctamente.")
         st.write(f"Encoding detectado: {encoding}")
 
-        # Vista previa de las columnas detectadas
-        st.write("Columnas detectadas:", list(df.columns))
+        # Mostrar vista previa
+        st.write("Vista previa del archivo:")
+        st.dataframe(df.head())
 
-        # Validar columnas necesarias
-        required_columns = ["Número de venta", "Valor neto"]
-        if not all(col in df.columns for col in required_columns):
-            st.error(f"Faltan las siguientes columnas requeridas: {required_columns}")
+        # Asignar nombres provisionales a las columnas
+        df.columns = [f"col_{i}" for i in range(df.shape[1])]
+
+        # Validar que al menos haya suficientes columnas para identificar la cuarta columna (Número de venta)
+        if df.shape[1] < 4:
+            st.error("El archivo no contiene suficientes columnas para procesar.")
             st.stop()
 
-        # Asegurar que la columna "Número de venta" corresponde a su contenido
-        df["Número de venta"] = df["Número de venta"].astype(str).fillna("")
+        # Seleccionar la cuarta columna como "Número de venta"
+        df["Número de venta"] = df["col_3"].astype(str).fillna("")
         if df["Número de venta"].str.isnumeric().all():
             df["Número de venta"] = df["Número de venta"].astype(int).astype(str)
 
-        # Convertir "Valor neto" a numérico y eliminar filas no válidas
-        df["Valor neto"] = pd.to_numeric(df["Valor neto"], errors="coerce")
+        # Validar que al menos haya suficientes columnas para identificar "Valor neto"
+        if df.shape[1] < 13:  # Por ejemplo, si "Valor neto" está en la última columna
+            st.error("El archivo no contiene suficientes columnas para identificar 'Valor neto'.")
+            st.stop()
+
+        # Seleccionar la columna "Valor neto" (última columna)
+        df["Valor neto"] = pd.to_numeric(df.iloc[:, -1], errors="coerce")
         df = df.dropna(subset=["Valor neto"])
 
         # Agrupar por "Número de venta" y sumar los valores netos
