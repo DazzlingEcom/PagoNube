@@ -14,7 +14,10 @@ if uploaded_file is not None:
     # Agregar un encabezado provisional para identificar columnas
     df.columns = [f"col_{i}" for i in range(df.shape[1])]
 
-    # Excluir filas cuya columna 0 esté vacía
+    # Mostrar columnas detectadas para verificar nombres
+    st.write("Columnas detectadas:", list(df.columns))
+
+    # Excluir filas cuya columna 0 (Número de venta) esté vacía
     df = df[df['col_0'].notna() & df['col_0'].str.strip().astype(bool)]
 
     # Extraer el último número (valor neto) de cada fila
