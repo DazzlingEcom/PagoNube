@@ -30,11 +30,13 @@ if uploaded_file is not None:
             st.error(f"Faltan las siguientes columnas requeridas: {required_columns}")
             st.stop()
 
-        # Asegurar que las columnas relevantes son de tipo string o numérico
+        # Asegurar que la columna "Número de venta" corresponde a su contenido
         df["Número de venta"] = df["Número de venta"].astype(str).fillna("")
-        df["Valor neto"] = pd.to_numeric(df["Valor neto"], errors="coerce")
+        if df["Número de venta"].str.isnumeric().all():
+            df["Número de venta"] = df["Número de venta"].astype(int).astype(str)
 
-        # Eliminar filas con valores no válidos en "Valor neto"
+        # Convertir "Valor neto" a numérico y eliminar filas no válidas
+        df["Valor neto"] = pd.to_numeric(df["Valor neto"], errors="coerce")
         df = df.dropna(subset=["Valor neto"])
 
         # Agrupar por "Número de venta" y sumar los valores netos
