@@ -3,7 +3,7 @@ import pandas as pd
 import chardet
 
 # Título de la aplicación
-st.title("Procesador de CSV - Diagnóstico y Agrupación por Número de Venta")
+st.title("Procesador de CSV - Suma y Exportación")
 
 # Subida del archivo CSV
 uploaded_file = st.file_uploader("Sube un archivo CSV", type="csv")
@@ -26,10 +26,6 @@ if uploaded_file is not None:
         st.write("Vista previa del archivo original:")
         st.dataframe(df.head(10))
 
-        # Diagnóstico inicial de columnas
-        st.write("Columnas detectadas:")
-        st.write(list(df.columns))
-
         # Intentar dividir las columnas si parecen comprimidas
         if len(df.columns) == 1:
             st.warning("Las columnas parecen comprimidas. Intentando dividirlas...")
@@ -51,41 +47,56 @@ if uploaded_file is not None:
             st.stop()
 
         # Validar columnas necesarias
-        required_columns = ["Número de venta", "Valor neto"]
+        required_columns = ["Número de venta", "Valor neto", "Fecha de creación"]
         missing_columns = [col for col in required_columns if col not in df.columns]
         if missing_columns:
             st.error(f"Faltan las columnas requeridas: {', '.join(missing_columns)}")
             st.stop()
 
-        # Convertir columnas clave a numérico
+        # Convertir columnas clave a los formatos adecuados
         df["Número de venta"] = pd.to_numeric(df["Número de venta"], errors="coerce")
         df["Valor neto"] = pd.to_numeric(df["Valor neto"], errors="coerce")
+        df["Fecha de creación"] = pd.to_datetime(df["Fecha de creación"], errors="coerce", format='%d-%m-%Y %H:%M:%S')
 
-        # Filtrar filas con datos válidos
-        valid_sales = df.dropna(subset=["Número de venta", "Valor neto"])
+        # Filtrar filas válidas
+        valid_df = df.dropna(subset=["Número de venta", "Valor neto", "Fecha de creación"])
 
-        # Diagnóstico de filas válidas
-        st.write(f"Total de filas válidas después del filtrado: {valid_sales.shape[0]}")
+        # Agrupar por fecha y sumar valor neto
+        grouped_data = valid_df.groupby(valid_df["Fecha de creación"].dt.date)["Valor neto"].sum().reset_index()
+        grouped_data.columns = ["Fecha", "Suma Valor Neto"]
 
-        # Agrupar por "Número de venta" y sumar "Valor neto"
-        grouped_data = valid_sales.groupby("Número de venta")["Valor neto"].sum().reset_index()
-        grouped_data.columns = ["Número de venta", "Suma Valor Neto"]
-
-        # Mostrar resultados agrupados
-        st.subheader("Resultados agrupados por Número de Venta:")
+        # Mostrar resultados agrupados por fecha
+        st.subheader("Resultados agrupados por Fecha:")
         if grouped_data.empty:
             st.warning("No se encontraron datos válidos después del procesamiento.")
         else:
             st.dataframe(grouped_data)
 
             # Descargar datos agrupados
-            csv = grouped_data.to_csv(index=False).encode('utf-8')
+            grouped_csv = grouped_data.to_csv(index=False).encode('utf-8')
             st.download_button(
-                label="Descargar CSV Agrupado",
-                data=csv,
-                file_name='ventas_agrupadas.csv',
+                label="Descargar CSV Agrupado por Fecha",
+                data=grouped_csv,
+                file_name='suma_por_fecha.csv',
                 mime='text/csv'
             )
+
+        # Crear archivo filtrado con "Número de venta", "Valor Neto" y "Fecha"
+        filtered_data = valid_df[["Número de venta", "Valor neto", "Fecha de creación"]].copy()
+        filtered_data.columns = ["Número de venta", "Valor Neto", "Fecha"]
+
+        # Mostrar datos filtrados
+        st.subheader("Datos filtrados con Número de Venta, Valor Neto y Fecha:")
+        st.dataframe(filtered_data)
+
+        # Descargar datos filtrados
+        filtered_csv = filtered_data.to_csv(index=False).encode('utf-8')
+        st.download_button(
+            label="Descargar CSV Filtrado",
+            data=filtered_csv,
+            file_name='datos_filtrados.csv',
+            mime='text/csv'
+        )
 
     except Exception as e:
         st.error(f"Error procesando el archivo: {e}")
