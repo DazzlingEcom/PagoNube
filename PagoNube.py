@@ -9,31 +9,29 @@ uploaded_file = st.file_uploader("Sube un archivo CSV", type="csv")
 
 if uploaded_file is not None:
     try:
-        # Leer el archivo CSV con separador y codificación esperados
+        # Leer el archivo CSV con separador esperado y encabezados desconocidos
         df = pd.read_csv(uploaded_file, header=None, sep=';', encoding='ISO-8859-1')
 
         # Agregar encabezados provisionales
         df.columns = [f"col_{i}" for i in range(df.shape[1])]
         st.write("Columnas detectadas:", list(df.columns))
 
-        # Mostrar vista previa inicial
+        # Vista previa inicial
         st.write("Vista previa inicial del archivo:")
         st.dataframe(df.head())
 
-        # Validar si la columna para "número de venta" parece correcta
-        st.write("Verificando contenido de 'col_0' (Número de venta):")
-        st.dataframe(df["col_0"].head(10))
+        # Verificar y asignar la columna de número de venta y valor neto
+        numero_venta_col = "col_0"  # Asume que 'col_0' es número de venta
+        valor_neto_col = f"col_{df.shape[1]-1}"  # Última columna como valor neto
 
-        # Excluir filas cuya columna 0 (Número de venta) esté vacía
-        df = df[df["col_0"].notna() & df["col_0"].str.strip().astype(bool)]
+        # Excluir filas cuya columna número de venta esté vacía
+        df = df[df[numero_venta_col].notna() & df[numero_venta_col].str.strip().astype(bool)]
 
         # Extraer el último número (valor neto) de cada fila
-        df["valor_neto"] = pd.to_numeric(df.iloc[:, -1], errors="coerce")
+        df["valor_neto"] = pd.to_numeric(df[valor_neto_col], errors="coerce")
 
-        # Convertir la columna de fecha a formato datetime
+        # Verificar si hay una columna que se pueda usar como fecha
         if "col_5" in df.columns:
-            st.write("Verificando contenido de 'col_5' (Fecha):")
-            st.dataframe(df["col_5"].head(10))
             df["fecha"] = pd.to_datetime(df["col_5"], errors="coerce", format='%d-%m-%Y %H:%M:%S')
 
         # Mostrar vista previa del archivo procesado
@@ -61,7 +59,7 @@ if uploaded_file is not None:
         )
 
         # Crear un DataFrame filtrado con "Número de venta" y "valor_neto"
-        filtered_df = df[["col_0", "valor_neto"]].rename(columns={"col_0": "numero_venta", "valor_neto": "valor_neto"})
+        filtered_df = df[[numero_venta_col, "valor_neto"]].rename(columns={numero_venta_col: "numero_venta", "valor_neto": "valor_neto"})
         filtered_df = filtered_df.dropna(subset=["valor_neto"])
 
         # Mostrar los datos filtrados
