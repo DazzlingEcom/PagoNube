@@ -3,7 +3,7 @@ import pandas as pd
 import chardet
 
 # Título de la aplicación
-st.title("Procesador de CSV - Agrupación por Número de Venta")
+st.title("Procesador de CSV - Agrupación por Número de Venta y Valor Neto")
 
 # Subida del archivo CSV
 uploaded_file = st.file_uploader("Sube un archivo CSV", type="csv")
@@ -17,7 +17,7 @@ if uploaded_file is not None:
         uploaded_file.seek(0)  # Resetear el puntero del archivo
 
         # Leer archivo CSV
-        df = pd.read_csv(uploaded_file, sep=';', encoding=encoding)
+        df = pd.read_csv(uploaded_file, sep='\t', encoding=encoding)
         st.write("Archivo leído correctamente.")
         st.write(f"Encoding detectado: {encoding}")
 
@@ -25,58 +25,32 @@ if uploaded_file is not None:
         st.write("Vista previa del archivo original:")
         st.dataframe(df.head())
 
-        # Verificar nombres de columnas
-        required_columns = ["Número de venta", "Valor neto"]
-        missing_columns = [col for col in required_columns if col not in df.columns]
-        if missing_columns:
-            st.error(f"Faltan las siguientes columnas requeridas: {missing_columns}")
+        # Verificar columnas
+        required_columns = ["Cliente", "Número de venta", "Valor neto"]
+        st.write("Columnas detectadas:", list(df.columns))
+        if not all(col in df.columns for col in required_columns):
+            st.error(f"Faltan las siguientes columnas requeridas: {', '.join(required_columns)}")
             st.stop()
 
-        # Limpieza de la columna "Número de venta"
-        st.write("Procesando columna 'Número de venta'...")
-        st.write("Valores únicos en la columna 'Número de venta':")
-        st.write(df["Número de venta"].unique())
-
-        # Convertir "Número de venta" a string, eliminar espacios
-        df["Número de venta"] = df["Número de venta"].astype(str).str.strip()
-
-        # Filtrar filas con valores no válidos o nulos en "Número de venta"
-        df = df[df["Número de venta"].notna()]
-        df = df[df["Número de venta"].str.isnumeric()]
-
-        # Mostrar vista previa después del filtrado por "Número de venta"
-        st.write("Vista previa después de filtrar números de venta válidos:")
-        st.dataframe(df.head())
-
-        # Convertir la columna "Valor neto" a numérico
-        st.write("Convirtiendo 'Valor neto' a valores numéricos...")
+        # Limpiar y convertir columnas clave
+        df["Número de venta"] = pd.to_numeric(df["Número de venta"], errors="coerce")
         df["Valor neto"] = pd.to_numeric(df["Valor neto"], errors="coerce")
 
-        # Filtrar filas válidas en "Valor neto"
-        st.write("Filas con valores no válidos en 'Valor neto':")
-        invalid_rows = df[df["Valor neto"].isna()]
-        st.dataframe(invalid_rows)
+        # Filtrar filas válidas
+        valid_sales = df.dropna(subset=["Número de venta", "Valor neto"])
 
-        valid_df = df.dropna(subset=["Valor neto"])
-
-        # Mostrar datos válidos después del filtrado
-        st.write("Vista previa de datos válidos para agrupar:")
-        st.dataframe(valid_df)
-
-        # Agrupar por "Número de venta" y sumar los valores netos
-        grouped_data = valid_df.groupby("Número de venta")["Valor neto"].sum().reset_index()
-
-        # Renombrar columnas para claridad
+        # Agrupar por "Número de venta" y sumar "Valor neto"
+        grouped_data = valid_sales.groupby("Número de venta")["Valor neto"].sum().reset_index()
         grouped_data.columns = ["Número de venta", "Suma Valor Neto"]
 
-        # Mostrar los datos agrupados
-        st.subheader("Datos agrupados por Número de Venta:")
+        # Mostrar resultados agrupados
+        st.subheader("Resultados agrupados por Número de Venta:")
         if grouped_data.empty:
             st.warning("No se encontraron datos válidos después del procesamiento.")
         else:
             st.dataframe(grouped_data)
 
-            # Exportar los datos agrupados a CSV
+            # Descargar datos agrupados
             csv = grouped_data.to_csv(index=False).encode('utf-8')
             st.download_button(
                 label="Descargar CSV Agrupado",
