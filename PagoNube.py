@@ -18,7 +18,7 @@ if uploaded_file is not None:
 
         # Leer el archivo CSV con encoding detectado
         st.write(f"Encoding detectado: {encoding}")
-        df = pd.read_csv(uploaded_file, sep=';', encoding=encoding, error_bad_lines=False)
+        df = pd.read_csv(uploaded_file, sep=';', encoding=encoding)
         st.write("Archivo leído correctamente.")
 
         # Mostrar la vista previa inicial
