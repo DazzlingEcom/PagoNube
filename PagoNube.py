@@ -3,7 +3,7 @@ import pandas as pd
 import chardet
 
 # Título de la aplicación
-st.title("Procesador Automático de CSV - Agrupar por Número de Venta y Valor Neto")
+st.title("Procesador de CSV - Agrupación por Número de Venta")
 
 # Subida del archivo CSV
 uploaded_file = st.file_uploader("Sube un archivo CSV", type="csv")
@@ -26,20 +26,21 @@ if uploaded_file is not None:
         st.dataframe(df.head())
 
         # Verificar nombres de columnas y mapearlos correctamente
-        required_columns = ["Número de venta", "Valor neto"]
-        missing_columns = [col for col in required_columns if col not in df.columns]
-        if missing_columns:
-            st.error(f"Faltan las siguientes columnas requeridas: {missing_columns}")
+        if "Número de venta" not in df.columns or "Valor neto" not in df.columns:
+            st.error("Las columnas 'Número de venta' y 'Valor neto' no están presentes en el archivo.")
             st.stop()
 
-        # Asegurarse de que "Número de venta" sea tratada como texto para evitar problemas con ceros iniciales
-        df["Número de venta"] = df["Número de venta"].astype(str)
+        # Limpieza de la columna "Número de venta"
+        df["Número de venta"] = df["Número de venta"].astype(str).str.strip()
 
-        # Convertir "Valor neto" a numérico
+        # Filtrar filas con valores no válidos o nulos en "Número de venta"
+        df = df[df["Número de venta"].notna() & df["Número de venta"].str.isnumeric()]
+
+        # Convertir la columna "Valor neto" a numérico
         df["Valor neto"] = pd.to_numeric(df["Valor neto"], errors="coerce")
 
         # Filtrar filas válidas
-        valid_df = df.dropna(subset=["Número de venta", "Valor neto"])
+        valid_df = df.dropna(subset=["Valor neto"])
 
         # Agrupar por "Número de venta" y sumar los valores netos
         grouped_data = valid_df.groupby("Número de venta")["Valor neto"].sum().reset_index()
